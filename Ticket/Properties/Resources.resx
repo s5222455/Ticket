@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="default_document" xml:space="preserve">
+    <value>&lt;html&gt;&lt;head&gt;&lt;style type="text/css"&gt;
+body{margin:0px}
+th{background-color:#133e5d;color:white;}
+table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;}
+.head,.foot{
+ background-color:#f1f5fe;
+ width:100%;
+ height:30px;
+ line-height: 30px;
+ text-align:center;
+}
+.foot{
+ color:red;
+ overflow: hidden;
+ white-space: nowrap;
+ font-weight: 600;position:absolute;bottom:0px;
+}
+.main{
+margin:0px auto;
+height:300px;
+width:750px;
+color:#009eff;
+font-size:13px;
+line-height: 20px;
+margin-left:60px;
+}
+.main span{
+color:red;
+font-weight:600;
+}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;table&gt;&lt;thead&gt;&lt;tr style="height:23px;"&gt;&lt;th width="49"&gt;车次&lt;/th&gt;&lt;th width="49"&gt;发站&lt;/th&gt;&lt;th width="49"&gt;到站&lt;/th&gt;&lt;th width="49"&gt;历时&lt;/th&gt;&lt;th width="49"&gt;商务座&lt;/th&gt;&lt;th width="49"&gt;特等座&lt;/th&gt;&lt;th width="49"&gt;一等座&lt;/th&gt;&lt;th width="49"&gt;二等座&lt;/th&gt;&lt;th width="60"&gt;高级软卧&lt;/th&gt;&lt;th width="49"&gt;软卧&lt;/th&gt;&lt;th width="49"&gt;硬卧&lt;/th&gt;&lt;th width="49"&gt;软座&lt;/th&gt;&lt;th width="49"&gt;硬座&lt;/th&gt;&lt;th width="49"&gt;无座&lt;/th&gt;&lt;th width="49"&gt;其他&lt;/th&gt;&lt;th class="49"&gt;购票&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+&lt;tbody id="queryLeftTable"&gt;&lt;/tbody&gt;
+&lt;/table&gt;&lt;div class="head"&gt;今日是: 2015/3/26 (二月初七 - 春运第51天 )   今日起售 2015/5/24 (四月初七 ) 车票   2015/4/14 (二月廿六) 临客票 &lt;/div&gt;
+&lt;div class="main"&gt;
+&lt;span&gt;欢迎您使用心蓝12306订票助手，咱老百姓自己的抢票软件！在每次使用之前，请您认真阅读如下说明：&lt;/span&gt;&lt;/br&gt;
+1、助手基于12306官网开发，优化购票逻辑过程，提高购票效率，但热门票竞争激烈请保持良好心态；&lt;/br&gt;
+2、强烈建议新手仔细查看助手左上方"帮助"-"用户指南"，学会基本操作，熟练各项功能，掌握相关技巧；&lt;/br&gt;
+3、节假日12306时常崩溃，如有无法获取验证码，timeout等异常情况时请您淡定，并访问12306官网试试；&lt;/br&gt;
+4、学会并灵活运用助手，如出发地/目的地/出发日期后面均有个加号，可添加多个临近站点日期提高抢票刷票成功率；&lt;/br&gt;
+5、"帮助"-"软件注册"(或按F8键)保存后，右下方会显示您的限额，如确有需求请再次购买并更换新的注册名注册码即可；&lt;/br&gt;
+6、本助手仅为您提供友好快捷方便实用的网络自助购票服务，请合理合法购票，勿触犯国家相关法律，否则一切后果自负！&lt;/br&gt;
+&lt;span&gt;步骤：登录——输入站点——更多查询设置中设置筛选优先等需求——选择乘客——查询后手动预定或自动查询自动提交&lt;/span&gt;&lt;/br&gt;
+如9点抢预售票，8点左右开始登录窗口-1设置好后，"自动查询"中开始查询时间输入09:00:00并打下面第一个勾即可。&lt;/span&gt;&lt;/br&gt;
+可重复上述步骤，登录窗口-2及窗口-3，时间设置为08:59:56、08:59:58以提高机率，然后默默祈祷，等待幸福的时刻。&lt;/span&gt;&lt;/br&gt;
+抢票失败请不要放弃，乘客信息设置好，"更多查询设置"中席别及车次等优先设置好，"自动查询"打上勾确定后开始自动刷票。&lt;/br&gt;
+如频繁出现"悲剧403"、网络错误等请关闭所有助手，将路由器或者宽带猫重启，或者等待10分种后再次启动助手即可恢复；&lt;/br&gt;
+助手右上方"数字"为您当前的IP，等级是您的网络与"12306"连接的速度与助手无关，"我的火车票"中可查看您相关的订单信息；&lt;/br&gt;
+助手右下方为助手运行情况的实时日志显示，请您留意该处信息善于分析总结，以便及时买到自己需要的火车票。祝您购票愉快！&lt;/br&gt;
+请勿倒卖车票，一旦发现心蓝数据将强制关闭您的授权！存好心，说好话，行好事，做好人！&gt;&gt;&gt;点击查看   &gt;&gt;&gt;了解更多 &lt;/div&gt;
+&lt;div class='foot' id='foot'&gt;自己抢票，远离黄牛！本助手支持儿童票、学生票等所有票种的购买及改签。儿童票需和成人票一起购买，购买学生票时“更多查询设置”-“我是学生”必须打勾。整点抢票自动查询中设置好临近起售时间点的“开始查询时间”，切记请勿过早查询！千万别以为没买到预售票就没希望了，预售提前60天，往后退票率会大增，所以看到无票请勿灰心，每天坚持刷99.9%可以刷到。同时提醒您进入倒计时后，点击右下方的"北京时间"区域同步时间确保分秒不差。 —— 2015年3月26日 &lt;/div&gt;
+&lt;script&gt;
+var speed=20
+var foot=document.getElementById("foot");
+function Marquee(){
+ if(foot.scrollLeft&gt;=2012)
+  foot.scrollLeft=0;
+ else{
+  foot.scrollLeft++;
+ }
+}
+var MyMar=setInterval(Marquee,speed)
+foot.onmouseover=function() {clearInterval(MyMar)}
+foot.onmouseout=function() {MyMar=setInterval(Marquee,speed)}
+&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="logo" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\logo.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="query_document" xml:space="preserve">
+    <value>&lt;html&gt;&lt;head&gt;&lt;style type="text/css"&gt;body{margin:0px}a:visited{color: #0000ff;
+ text-decoration: none;
+}table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;text-align:center;background-color:#d3d3d3;}th{background-color:#133e5d;color:white;font-size: 12px;}td{border:solid #a0a0a0 1px;font-size: 12px;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;table&gt;&lt;thead&gt;&lt;tr 
+style="height:23px;"&gt;&lt;th width="49"&gt;车次&lt;/th&gt;&lt;th width="49"&gt;发站&lt;/th&gt;&lt;th width="49"&gt;到站&lt;/th&gt;&lt;th 
+width="49"&gt;历时&lt;/th&gt;&lt;th width="49"&gt;商务座&lt;/th&gt;&lt;th width="49"&gt;特等座&lt;/th&gt;&lt;th width="49"&gt;一等座&lt;/th&gt;&lt;th 
+width="49"&gt;二等座&lt;/th&gt;&lt;th width="60"&gt;高级软卧&lt;/th&gt;&lt;th width="49"&gt;软卧&lt;/th&gt;&lt;th width="49"&gt;硬卧&lt;/th&gt;&lt;th 
+width="49"&gt;软座&lt;/th&gt;&lt;th width="49"&gt;硬座&lt;/th&gt;&lt;th width="49"&gt;无座&lt;/th&gt;&lt;th width="49"&gt;其他&lt;/th&gt;&lt;th class="49"&gt;
+购票&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody id="queryLeftTable"&gt;{@queryContent}&lt;/tbody&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</value>
+  </data>
+  <data name="wifi1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\wifi1.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="wifi2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\wifi2.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="wifi3" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\wifi3.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="wifi4" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\wifi4.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="wifi5" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\wifi5.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+</root>

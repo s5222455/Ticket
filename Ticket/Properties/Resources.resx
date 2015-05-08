@@ -187,15 +187,39 @@ foot.onmouseout=function() {MyMar=setInterval(Marquee,speed)}
   <data name="logo" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\logo.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="order_document" xml:space="preserve">
+    <value>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;&lt;/title&gt;
+&lt;style type="text/css"&gt;
+body{margin:0px;border-top:1px solid #000;}
+p{
+margin:0px auto;
+font-size:12px;
+text-align:center;
+}
+p span{
+bold:bold;
+}select{
+border:0;
+}
+tbody tr{border-bottom:1px dashed #000;}
+th{background-color:#133e5d;color:white;}
+table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;text-align:left;}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;p&gt;您即将预订：{@orderInfo}&lt;p&gt;
+&lt;p&gt;其中：&lt;span&gt;{@seat}&lt;/span&gt;&lt;p&gt;
+&lt;table&gt;
+&lt;thead&gt;&lt;tr&gt;&lt;th width="50"&gt;序号&lt;/th&gt;&lt;th width="100"&gt;席别&lt;/th&gt;&lt;th width="100"&gt;票种&lt;/th&gt;&lt;th width="100"&gt;姓名&lt;/th&gt;&lt;th width="100"&gt;证件类型&lt;/th&gt;&lt;th width="150"&gt;证件号码&lt;/th&gt;&lt;th&gt;手机号码&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+&lt;tbody&gt;{@passengers}&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;</value>
+  </data>
   <data name="query_document" xml:space="preserve">
-    <value>&lt;html&gt;&lt;head&gt;&lt;style type="text/css"&gt;body{margin:0px}a:visited{color: #0000ff;
- text-decoration: none;
-}table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;text-align:center;background-color:#d3d3d3;}th{background-color:#133e5d;color:white;font-size: 12px;}td{border:solid #a0a0a0 1px;font-size: 12px;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;table&gt;&lt;thead&gt;&lt;tr 
-style="height:23px;"&gt;&lt;th width="49"&gt;车次&lt;/th&gt;&lt;th width="49"&gt;发站&lt;/th&gt;&lt;th width="49"&gt;到站&lt;/th&gt;&lt;th 
-width="49"&gt;历时&lt;/th&gt;&lt;th width="49"&gt;商务座&lt;/th&gt;&lt;th width="49"&gt;特等座&lt;/th&gt;&lt;th width="49"&gt;一等座&lt;/th&gt;&lt;th 
-width="49"&gt;二等座&lt;/th&gt;&lt;th width="60"&gt;高级软卧&lt;/th&gt;&lt;th width="49"&gt;软卧&lt;/th&gt;&lt;th width="49"&gt;硬卧&lt;/th&gt;&lt;th 
-width="49"&gt;软座&lt;/th&gt;&lt;th width="49"&gt;硬座&lt;/th&gt;&lt;th width="49"&gt;无座&lt;/th&gt;&lt;th width="49"&gt;其他&lt;/th&gt;&lt;th class="49"&gt;
-购票&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody id="queryLeftTable"&gt;{@queryContent}&lt;/tbody&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</value>
+    <value>&lt;html&gt;&lt;head&gt;&lt;style type="text/css"&gt;body{margin:0px}a:visited{color: #0000ff; text-decoration: none; }table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;text-align:center;background-color:#d3d3d3;}th{background-color:#133e5d;color:white;font-size: 12px;}td{border:solid #a0a0a0 1px;font-size: 12px;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;table&gt;&lt;thead&gt;&lt;tr style="height:23px;"&gt;&lt;th width="49"&gt;车次&lt;/th&gt;&lt;th width="49"&gt;发站&lt;/th&gt;&lt;th width="49"&gt;到站&lt;/th&gt;&lt;th width="49"&gt;历时&lt;/th&gt;&lt;th width="49"&gt;商务座&lt;/th&gt;&lt;th width="49"&gt;特等座&lt;/th&gt;&lt;th width="49"&gt;一等座&lt;/th&gt;&lt;th width="49"&gt;二等座&lt;/th&gt;&lt;th width="60"&gt;高级软卧&lt;/th&gt;&lt;th width="49"&gt;软卧&lt;/th&gt;&lt;th width="49"&gt;硬卧&lt;/th&gt;&lt;th width="49"&gt;软座&lt;/th&gt;&lt;th width="49"&gt;硬座&lt;/th&gt;&lt;th width="49"&gt;无座&lt;/th&gt;&lt;th width="49"&gt;其他&lt;/th&gt;&lt;th class="49"&gt; 购票&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody id="queryLeftTable"&gt;{@queryContent}&lt;/tbody&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</value>
   </data>
   <data name="wifi1" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\wifi1.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

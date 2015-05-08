@@ -126,6 +126,37 @@ namespace Ticket
             }
         }
 
+        public void AddUser(User user)
+        {
+            if (users == null)
+            {
+                users = new List<User>();
+            }
+
+            if (!users.Exists((u) => { return u.Username == user.Username; }))
+            {
+                users.Add(user);
+            }
+        }
+
+        public void RemoveUser(string uname)
+        {
+            if (string.IsNullOrEmpty(uname))
+                return;
+
+            if (users == null)
+                return;
+
+            for(var i=users.Count-1;i>=0;i--)
+            {
+                var user=users[i];
+                if(user.Username==uname)
+                {
+                    users.Remove(user);
+                }
+            }
+        }
+
         /// <summary>
         /// 保存设置
         /// </summary>

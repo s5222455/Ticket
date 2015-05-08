@@ -84,6 +84,25 @@ public class EnumHelper
         }
         return list;
     }
+
+    public static string EnumToHtmlElement(Type enumType)
+    {
+        var items = ConvertEnumToListItems(enumType);
+        if (items == null || items.Count <= 0)
+            return string.Empty;
+
+        StringBuilder sb = new StringBuilder();
+        sb.Append(string.Format("<select id='{0}'>", enumType.Name));
+
+        foreach (var item in items)
+        {
+            sb.Append(string.Format("<option value='{0}'>{1}</option>", item.Value, item.Text));
+        }
+
+        sb.Append("</select>");
+
+        return sb.ToString();
+    }
 }
 
 public class ListItem

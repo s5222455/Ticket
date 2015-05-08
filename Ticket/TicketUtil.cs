@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Net.NetworkInformation;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Ticket
 {
@@ -186,6 +187,79 @@ namespace Ticket
         public static string UrlEncode(string data)
         {
             return System.Web.HttpUtility.UrlEncode(data, Encoding.UTF8);
+        }
+
+        private const int INTERNET_COOKIE_HTTPONLY = 0x00002000;
+
+        [DllImport("wininet.dll", SetLastError = true)]
+        private static extern bool InternetGetCookieEx(
+            string url,
+            string cookieName,
+            StringBuilder cookieData,
+            ref int size,
+            int flags,
+            IntPtr pReserved);
+
+        /// <summary>
+        /// Returns cookie contents as a string
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string GetCookie(string url)
+        {
+            int size = 512;
+            StringBuilder sb = new StringBuilder(size);
+            if (!InternetGetCookieEx(url, null, sb, ref size, INTERNET_COOKIE_HTTPONLY, IntPtr.Zero))
+            {
+                if (size < 0)
+                {
+                    return null;
+                }
+                sb = new StringBuilder(size);
+                if (!InternetGetCookieEx(url, null, sb, ref size, INTERNET_COOKIE_HTTPONLY, IntPtr.Zero))
+                {
+                    return null;
+                }
+            }
+            return sb.ToString();
+        }
+
+        public static string ToLongDate(string date)
+        {
+            if (date.Length != 8)
+                return date;
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append(date.Substring(0, 4));
+            sb.Append("-");
+            sb.Append(date.Substring(4, 2));
+            sb.Append("-");
+            sb.Append(date.Substring(6, 2));
+
+            return sb.ToString();
+        }
+
+        static string[] Day = new string[] { "星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六" };
+        public static string ToCnWeek(DateTime date)
+        {
+            return Day[Convert.ToInt16(DateTime.Now.DayOfWeek)];
+        }
+
+        public static string CardTypeToHtmlString(string id, CardType2[] cardTypes)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(string.Format("<select id='{0}'>", id));
+            if (cardTypes != null && cardTypes.Length > 0)
+            {
+                foreach (var c in cardTypes)
+                {
+                    sb.Append(string.Format("<option value='{0}'>{1}</option>", c.id, c.value));
+                }
+            }
+
+            sb.Append("</select>");
+
+            return sb.ToString();
         }
     }
 }

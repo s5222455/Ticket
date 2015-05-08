@@ -19,12 +19,19 @@ namespace Ticket
         private bool isEnabledSelf = false;
         private Timer timer = new Timer();
 
+        #region document
+        private string default_document = global::Ticket.Properties.Resources.default_document;
+        private string query_document = global::Ticket.Properties.Resources.query_document;
+        private string order_document = global::Ticket.Properties.Resources.order_document;
+        #endregion
+
         public FrmMain()
         {
             InitializeComponent();
             Init();
 
             this.ShowInTaskbar = false;
+            this.webBrowserOrder.Visible = false;
             this.llblQueryOption.Click += new EventHandler(llblQueryOption_Click);
             this.llblPrevDate.Click += new EventHandler(llblPrevDate_Click);
             this.llblNextDate.Click += new EventHandler(llblNextDate_Click);
@@ -52,7 +59,7 @@ namespace Ticket
             ShowSelectPassengers();
             ShowQueryOption(Setting.GetInstance().QueryOption);
 
-            this.webBrowser.DocumentText = global::Ticket.Properties.Resources.default_document;
+            this.webBrowser.DocumentText = default_document;
             this.webBrowser.DocumentCompleted += new WebBrowserDocumentCompletedEventHandler(webBrowser_DocumentCompleted);
         }
 
@@ -112,7 +119,7 @@ namespace Ticket
             var ticketResult = _client.QueryTicket(date.ToString("yyyy-MM-dd"), from, to);
             if (ticketResult != null)
             {
-                var document = global::Ticket.Properties.Resources.query_document.Replace("{@queryContent}", TicketsToString(ticketResult.data));
+                var document = ParseQueryDocument(TicketsToString(ticketResult.data));
 
                 if (this.InvokeRequired)
                 {
@@ -171,9 +178,27 @@ namespace Ticket
                     MessageBox.Show("station");
                     break;
                 case "order":
-                    MessageBox.Show("order");
+                    this.Invoke((MethodInvoker)(() =>
+                    {
+                        Reservation(htmlEle.Id);
+                    }));
                     break;
             }
+        }
+
+        private void Reservation(string secret)
+        {
+            if (!_client.IsLogin)
+            {
+                tsbtnLogin_Click(this, new EventArgs());
+            }
+
+            if (_client.Tickets == null)
+                return;
+
+            var ticket = _client.Tickets.Single((t) => { return t.secretStr == secret; });
+
+            _client.Reservation(ticket.queryLeftNewDTO.start_train_date, secret, ticket.queryLeftNewDTO.from_station_name, ticket.queryLeftNewDTO.end_station_name);
         }
 
         void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
@@ -208,7 +233,52 @@ namespace Ticket
             _client.LoginCompleted += new EventHandler<LoginEventArgs>(_client_LoginCompleted);
             _client.LoadPassengerCompleted += new EventHandler<PassengerEventArgs>(_client_LoadPassengerCompleted);
             _client.OpertionPassengerCompleted += new EventHandler<PassengerEventArgs>(_client_OpertionPassengerCompleted);
+            _client.RequestOrderCompleted += new EventHandler<RequestOrderEventArgs>(_client_RequestOrderCompleted);
             _client.LoadCities();
+        }
+
+        void _client_RequestOrderCompleted(object sender, RequestOrderEventArgs e)
+        {
+            if (e.TicketInfo == null)
+                return;
+
+            Passenger[] passengers = this.lvPassenger.Tag as Passenger[];
+            if (passengers == null || passengers.Length <= 0)
+            {
+                return;
+            }
+
+            string seat = TicketUtil.CardTypeToHtmlString("seat", e.TicketInfo.limitBuySeatTicketDTO.seat_type_codes);
+            string ticket = TicketUtil.CardTypeToHtmlString("ticket_type", e.TicketInfo.limitBuySeatTicketDTO.ticket_type_codes);
+
+            StringBuilder sb = new StringBuilder();
+
+            for (int i = 0; i < passengers.Length; i++)
+            {
+                sb.Append(passengers[i].PassengerToHtmlString(i + 1, seat, ticket));
+            }
+
+            string document = ParseOrderDocument(e.TicketInfo.queryLeftTicketRequestDTO.ToHtmlString(), e.TicketInfo.leftDetails.Aggregate((l, r) => { return l + " " + r; }), sb.ToString());
+
+            ShowOrderInfo(document);
+        }
+
+        private void ShowOrderInfo(string document)
+        {
+            this.Invoke((MethodInvoker)(() =>
+            {
+                this.webBrowserOrder.DocumentText = document;
+                this.webBrowserOrder.Visible = true;
+            }));
+        }
+
+        private void HideOrderInfo()
+        {
+            this.Invoke((MethodInvoker)(() =>
+            {
+                this.webBrowserOrder.DocumentText = string.Empty;
+                this.webBrowserOrder.Visible = false;
+            }));
         }
 
         int loginTryCount = 0;
@@ -304,7 +374,7 @@ namespace Ticket
             {
                 SetUsername(_client.User.Username);
                 SetControlText(tsbtnLogin, this._client.User.NickName);
-                Setting.GetInstance().Users.Add(_client.User);
+                Setting.GetInstance().AddUser(_client.User);
                 Setting.GetInstance().Save();
             }
             else
@@ -562,6 +632,11 @@ namespace Ticket
             }
         }
 
+        void BindOrderInfo(Passenger[] passengers)
+        {
+
+        }
+
         void llblQueryOption_Click(object sender, EventArgs e)
         {
             if (isShowQueryOption)
@@ -681,6 +756,8 @@ namespace Ticket
                     lvItem.Tag = p;
                     this.lvPassenger.Items.Add(lvItem);
                 }
+
+                this.lvPassenger.Tag = passengers;
             }
         }
 
@@ -855,6 +932,16 @@ namespace Ticket
             });
 
             t.Start();
+        }
+
+        private string ParseQueryDocument(string queryInfo)
+        {
+            return query_document.Replace("{@queryContent}", queryInfo);
+        }
+
+        private string ParseOrderDocument(string order, string seat, string passengers)
+        {
+            return order_document.Replace("{@orderInfo}", order).Replace("{@seat}", seat).Replace("{@passengers}", passengers);
         }
     }
 }

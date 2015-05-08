@@ -47,6 +47,7 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.panel3 = new System.Windows.Forms.Panel();
             this.webBrowser = new System.Windows.Forms.WebBrowser();
+            this.webBrowserOrder = new System.Windows.Forms.WebBrowser();
             this.panelQueryOption = new System.Windows.Forms.Panel();
             this.dtEnd = new System.Windows.Forms.DateTimePicker();
             this.dtStart = new System.Windows.Forms.DateTimePicker();
@@ -233,14 +234,14 @@
             // 
             this.slblUsername.BorderStyle = System.Windows.Forms.Border3DStyle.Raised;
             this.slblUsername.Name = "slblUsername";
-            this.slblUsername.Size = new System.Drawing.Size(164, 17);
+            this.slblUsername.Size = new System.Drawing.Size(206, 17);
             this.slblUsername.Spring = true;
             this.slblUsername.Text = "未登录";
             // 
             // toolStripStatusLabel2
             // 
             this.toolStripStatusLabel2.Name = "toolStripStatusLabel2";
-            this.toolStripStatusLabel2.Size = new System.Drawing.Size(164, 17);
+            this.toolStripStatusLabel2.Size = new System.Drawing.Size(206, 17);
             this.toolStripStatusLabel2.Spring = true;
             this.toolStripStatusLabel2.Text = "信息发布区";
             // 
@@ -253,7 +254,7 @@
             // tslblTime
             // 
             this.tslblTime.Name = "tslblTime";
-            this.tslblTime.Size = new System.Drawing.Size(164, 17);
+            this.tslblTime.Size = new System.Drawing.Size(206, 17);
             this.tslblTime.Spring = true;
             this.tslblTime.Text = "北京时间:";
             // 
@@ -261,7 +262,7 @@
             // 
             this.toolStripStatusLabel5.IsLink = true;
             this.toolStripStatusLabel5.Name = "toolStripStatusLabel5";
-            this.toolStripStatusLabel5.Size = new System.Drawing.Size(164, 17);
+            this.toolStripStatusLabel5.Size = new System.Drawing.Size(206, 17);
             this.toolStripStatusLabel5.Spring = true;
             this.toolStripStatusLabel5.Text = "捐助我们";
             // 
@@ -278,6 +279,7 @@
             // panel3
             // 
             this.panel3.Controls.Add(this.webBrowser);
+            this.panel3.Controls.Add(this.webBrowserOrder);
             this.panel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel3.Location = new System.Drawing.Point(0, 178);
             this.panel3.Name = "panel3";
@@ -290,8 +292,17 @@
             this.webBrowser.Location = new System.Drawing.Point(0, 0);
             this.webBrowser.MinimumSize = new System.Drawing.Size(20, 20);
             this.webBrowser.Name = "webBrowser";
-            this.webBrowser.Size = new System.Drawing.Size(867, 197);
+            this.webBrowser.Size = new System.Drawing.Size(867, 20);
             this.webBrowser.TabIndex = 0;
+            // 
+            // webBrowserOrder
+            // 
+            this.webBrowserOrder.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.webBrowserOrder.Location = new System.Drawing.Point(0, 3);
+            this.webBrowserOrder.MinimumSize = new System.Drawing.Size(20, 20);
+            this.webBrowserOrder.Name = "webBrowserOrder";
+            this.webBrowserOrder.Size = new System.Drawing.Size(867, 194);
+            this.webBrowserOrder.TabIndex = 1;
             // 
             // panelQueryOption
             // 
@@ -934,6 +945,7 @@
         private System.Windows.Forms.ToolStripStatusLabel tslblTime;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel5;
         private System.Windows.Forms.ListView lvPassenger;
+        private System.Windows.Forms.WebBrowser webBrowserOrder;
     }
 }
 

@@ -27,5 +27,6 @@ namespace Ticket
         Login,
         VerifyError,
         Order,
+        Passenger,
     }
 }

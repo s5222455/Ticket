@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.ComponentModel;
 
 using Newtonsoft.Json;
+using System.Runtime.InteropServices;
 
 namespace Ticket
 {
@@ -17,12 +18,19 @@ namespace Ticket
         private bool _isLogin;
         private string _paramKey;
         private const int tryCount = 5;
+        private VerifyMode mode = VerifyMode.Login;
+        private int defaultDataLength;
+        private bool isCacheControl = true;
 
         public bool IsLogin { get { return _isLogin; } private set { _isLogin = value; } }
 
         public User User { get { return _user; } set { _user = value; } }
 
         public City[] Cities { get; private set; }
+
+        public Ticket[] Tickets { get; private set; }
+
+        public TicketInfo CurrentTicket { get; private set; }
 
         public string ParamKey
         {
@@ -44,13 +52,14 @@ namespace Ticket
         public TicketClient(Encoding encoding)
         {
             _httpHelper = new HttpHelper(encoding, cerPath);
+            defaultDataLength = TicketUtil.UrlEncode(default_post_data).Length;
         }
         #region url
         private static string domain = "kyfw.12306.cn";
         private static string host = "https://kyfw.12306.cn/otn/";
         private static string login_init_url = host + "login/init";
         private static string verify_image_url = host + "resources/js/newpasscode/captcha.png";
-        private static string login_verify_url = host + "passcodeNew/getPassCodeNew?module=login&rand=sjrand&0.{0}";
+        private static string login_verify_url = host + "passcodeNew/getPassCodeNew?module={0}&rand=sjrand&0.{1}";
         private static string login_check_url = host + "passcodeNew/checkRandCodeAnsyn";
         private static string login_url = host + "login/loginAysnSuggest";
         private static string login_url2 = host + "login/userLogin";
@@ -61,10 +70,16 @@ namespace Ticket
         private static string query_ticket_url = host + "leftTicket/query?leftTicketDTO.train_date={0}&leftTicketDTO.from_station={1}&leftTicketDTO.to_station={2}&purpose_codes=ADULT";
         private static string delete_passenger_url = host + "passengers/delete";
         private static string add_passenger_url = host + "passengers/add";
+        private static string submit_order_request_url = host + "leftTicket/submitOrderRequest";
+        private static string init_dc_url = host + "confirmPassenger/initDc";
+        private static string check_order_url = host + "confirmPassenger/checkOrderInfo";
+        private static string get_queue_count = host + "confirmPassenger/getQueueCount";
+        private static string check_user_url = host + "login/checkUser";
         private static string logout_url = host + "login/loginOut";
-        #endregion
 
-        private DateTime verifyDate;
+        private static string default_post_data = "_json_att=";
+        private static byte[] default_post_data_bytes = Encoding.Default.GetBytes(default_post_data);
+        #endregion
 
         public void ClearCookies()
         {
@@ -83,7 +98,9 @@ namespace Ticket
         {
             string url = string.Format(query_ticket_url, date, from, to);
             string html = this._httpHelper.GetHtml(url);
-            return JsonConvert.DeserializeObject<TicketResult>(html);
+            var TicketResult = JsonConvert.DeserializeObject<TicketResult>(html);
+            Tickets = TicketResult != null ? TicketResult.data : null;
+            return TicketResult;
         }
 
         public void InitLogin()
@@ -91,23 +108,28 @@ namespace Ticket
             string html = string.Empty;
             while (true)
             {
-                html = _httpHelper.GetHtml(login_init_url, GetInitHeaders());
+                html = _httpHelper.GetHtml(login_init_url, GetInitHeaders(_httpHelper.GetCookiesString(login_init_url)));
                 if (!string.IsNullOrEmpty(html))
                 {
                     break;
                 }
             }
 
+            RefreshDynamicKey(html);
+        }
+
+        private void RefreshDynamicKey(string html)
+        {
             var dynamicUrl = GetDynamicJsUrl(html);
             ParamKey = GetDynamicKey(dynamicUrl);
-            var jsUrl=GetDynamicUrl(html);
+            var jsUrl = GetDynamicUrl(html);
         }
 
         public void RefreshVerify(VerifyMode mode)
         {
-            verifyDate = DateTime.Now;
+            this.mode = mode;
 
-            string url = string.Format(login_verify_url, DateTime.Now.Ticks.ToString());
+            string url = string.Format(login_verify_url, GetLoginMode(mode), DateTime.Now.Ticks.ToString());
             try
             {
                 var image = this._httpHelper.GetImage(url, GetVerifyImageHeaders(this._httpHelper.GetCookiesString(login_init_url)));
@@ -120,11 +142,11 @@ namespace Ticket
             }
         }
 
-        public bool CheckVerify(string code)
+        public bool CheckVerify(string code, string token)
         {
-            string data = string.Format("randCode={0}&rand=sjrand", code);
+            string data = GetVerifyData(code, token);
             byte[] dataBytes = Encoding.Default.GetBytes(data);
-            var headers = GetCheckVerifyHeaders(dataBytes.Length.ToString(), this._httpHelper.GetCookiesString(login_init_url));
+            var headers = GetCheckVerifyHeaders(dataBytes.Length, this._httpHelper.GetCookiesString(login_init_url));
             string html = this._httpHelper.PostHtml(login_check_url, data, login_init_url);
             var verifyResult = JsonConvert.DeserializeObject<VerifyResult>(html);
             return verifyResult.data != null && verifyResult.data.result == "1";
@@ -133,7 +155,7 @@ namespace Ticket
         public void CheckLogin(string uname, string upwd, string code)
         {
             LoginEventArgs loginEventArgs = null;
-            if (CheckVerify(code))
+            if (CheckVerify(code, string.Empty))
             {
                 this.User = new User(uname, upwd);
                 string data = string.Format("loginUserDTO.user_name={0}&userDTO.password={1}&randCode={2}&{3}={4}&myversion=undefined", uname, upwd, TicketUtil.UrlEncode(code), ParamKey, TicketUtil.UrlEncode(ParamValue));
@@ -164,83 +186,113 @@ namespace Ticket
             OnLoginCompleted(loginEventArgs);
         }
 
-        private Dictionary<string, string> GetInitHeaders()
+        public void Reservation(string trainDate, string secret, string fromStationName, string toStationName)
         {
-            Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-            headers.Add("Accept-Encoding", "gzip, deflate, sdch");
-            headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
-            headers.Add("Connection", "keep-alive");
-            headers.Add("Host", "kyfw.12306.cn");
-            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
+            if (!IsLogin)
+                return;
 
-            return headers;
+            string html = _httpHelper.PostHtml(check_user_url, GetCheckUserHeaders(), default_post_data_bytes);
+
+            string requestOrderData = string.Format("{0}={1}&myversion=undefined&secretStr={2}&train_date={3}&back_train_date={4}&tour_flag=dc&purpose_codes=ADULT&query_from_station_name={5}&query_to_station_name={6}&undefined", ParamKey, TicketUtil.UrlEncode(ParamValue), secret, TicketUtil.ToLongDate(trainDate), DateTime.Now.ToString("yyyy-MM-dd"), fromStationName, toStationName);
+            var requestOrderBytes = Encoding.Default.GetBytes(requestOrderData);
+            html = _httpHelper.PostHtml(submit_order_request_url, GetOrderRequestHeaders(requestOrderBytes.Length), requestOrderBytes);
+
+            html = _httpHelper.PostHtml(init_dc_url, GetInitDcHeaders(), default_post_data_bytes);
+            RefreshDynamicKey(html);
+
+            CurrentTicket = JsonConvert.DeserializeObject<TicketInfo>(ticketInfoRegex.Match(html).Groups["value"].Value);
+            OnRequestOrderCompleted(new RequestOrderEventArgs(CurrentTicket));
+        }
+
+        private Dictionary<string, string> GetInitHeaders(string cookie)
+        {
+            return GetGetHeaders("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", host, cookie);
         }
 
         private Dictionary<string, string> GetVerifyImageHeaders(string cookie)
         {
-            Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Accept", "mage/webp,*/*;q=0.8");
-            headers.Add("Accept-Encoding", "gzip, deflate");
-            headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
-            headers.Add("Connection", "keep-alive");
-            headers.Add("Cookie", cookie);
-            headers.Add("Host", "kyfw.12306.cn");
-            headers.Add("Referer", "https://kyfw.12306.cn/otn/login/init");
-            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
-            return headers;
+            return GetGetHeaders("mage/webp,*/*;q=0.8", login_init_url, cookie);
         }
 
-        private Dictionary<string, string> GetCheckVerifyHeaders(string cLength, string cookie)
+        private Dictionary<string, string> GetCheckVerifyHeaders(int cLength, string cookie)
         {
-            Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Accept", "*/*");
-            headers.Add("Accept-Encoding", "gzip, deflate");
-            headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
-            headers.Add("Connection", "keep-alive");
-            headers.Add("Content-Length", cLength);
-            headers.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            headers.Add("Cookie", cookie);
-            headers.Add("Host", "kyfw.12306.cn");
-            headers.Add("Origin", "https://kyfw.12306.cn");
-            headers.Add("Referer", "https://kyfw.12306.cn/otn/login/init");
-            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
-            headers.Add("X-Requested-With", "XMLHttpRequest");
-            return headers;
+            return GetPostHeaders("*/*", cLength, cookie);
         }
 
         private Dictionary<string, string> GetDynamicHeaders(string cookie)
         {
-            Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Accept", "*/*");
-            headers.Add("Accept-Encoding", "gzip, deflate, sdch");
-            headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
-            headers.Add("Connection", "keep-alive");
-            headers.Add("Cookie", cookie);
-            headers.Add("Host", "kyfw.12306.cn");
-            headers.Add("Referer", login_init_url);
-            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
-
-            return headers;
+            return GetGetHeaders("*/*", login_init_url, cookie);
         }
 
         private Dictionary<string, string> GetLoginHeaders(string cLength, string cookie)
         {
+            return GetPostHeaders("*/*", defaultDataLength, _httpHelper.GetCookiesString(login_init_url));
+        }
+
+        private Dictionary<string, string> GetCheckUserHeaders()
+        {
+            return GetPostHeaders("*/*", defaultDataLength, _httpHelper.GetCookiesString(login_init_url), "0");
+        }
+
+        private Dictionary<string, string> GetOrderRequestHeaders(int cLength)
+        {
+            return GetPostHeaders("*/*", cLength, _httpHelper.GetCookiesString(login_init_url));
+        }
+
+        private Dictionary<string, string> GetInitDcHeaders()
+        {
+            return GetPostHeaders("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", defaultDataLength, _httpHelper.GetCookiesString(login_init_url));
+        }
+
+        private Dictionary<string, string> GetCheckOrderHeaders(int cLength)
+        {
+            return GetPostHeaders("application/json, text/javascript, */*; q=0.01", cLength, _httpHelper.GetCookiesString(login_init_url));
+        }
+
+        private Dictionary<string, string> GetGetHeaders(string accept, string referer, string cookie, bool isCacheControl = false)
+        {
             Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Accept", "*/*");
+            headers.Add("Accept", accept);
+            headers.Add("Accept-Encoding", "gzip, deflate, sdch");
+            headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
+            if (isCacheControl)
+            {
+                headers.Add("Cache-Control", "max-age=0");
+            }
+            headers.Add("Connection", "keep-alive");
+            if (!string.IsNullOrEmpty(cookie))
+            {
+                headers.Add("Cookie", cookie);
+            }
+            headers.Add("Host", "kyfw.12306.cn");
+            headers.Add("Referer", referer);
+            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
+
+            return headers;
+        }
+
+        private Dictionary<string, string> GetPostHeaders(string accept, int cLength, string cookie, string modified = "")
+        {
+            Dictionary<string, string> headers = new Dictionary<string, string>();
+            headers.Add("Accept", accept);
             headers.Add("Accept-Encoding", "gzip, deflate");
             headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
             headers.Add("Connection", "keep-alive");
-            headers.Add("Content-Length", cLength);
+            headers.Add("Content-Length", cLength.ToString());
             headers.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
             headers.Add("Cookie", cookie);
             headers.Add("Host", "kyfw.12306.cn");
+            if (!string.IsNullOrEmpty(modified))
+            {
+                headers.Add("If-Modified-Sinc", modified);
+            }
             headers.Add("Origin", "https://kyfw.12306.cn");
-            headers.Add("Referer", "https://kyfw.12306.cn/otn/login/init");
+            headers.Add("Referer", login_init_url);
             headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
             headers.Add("X-Requested-With", "XMLHttpRequest");
             return headers;
         }
+
 
         private void BeginGetPassengers()
         {
@@ -312,6 +364,7 @@ namespace Ticket
         private Regex paramRegex = new Regex("gc[(][)][{]var \\w+='(?<value>\\w+)';");
         private Regex pageRegex = new Regex("var totlePage = (?<value>\\d+);");
         private Regex unameRegex = new Regex("user_name='(?<value>.+?)';");
+        private Regex ticketInfoRegex = new Regex("ticketInfoForPassengerForm=(?<value>[\\w\\W]+?);");
 
         private string GetDynamicJsUrl(string html)
         {
@@ -341,6 +394,8 @@ namespace Ticket
         public event EventHandler<LoginEventArgs> LoginCompleted;
         public event EventHandler<PassengerEventArgs> LoadPassengerCompleted;
         public event EventHandler<PassengerEventArgs> OpertionPassengerCompleted;
+        public event EventHandler<RequestOrderEventArgs> RequestOrderCompleted;
+        public event EventHandler<SessionEventArgs> KeepLive;
 
         private void OnLoadCitiesCompleted(CityEventArgs e)
         {
@@ -388,6 +443,84 @@ namespace Ticket
             {
                 OpertionPassengerCompleted(this, e);
             }
+        }
+
+        private void OnRequestOrderCompleted(RequestOrderEventArgs e)
+        {
+            if (RequestOrderCompleted != null)
+            {
+                RequestOrderCompleted(this, e);
+            }
+        }
+
+        private void OnKeepLive(SessionEventArgs e)
+        {
+            if (KeepLive != null)
+            {
+                KeepLive(this, e);
+            }
+
+            if (e.State != 0)
+            {
+                RefreshVerify(VerifyMode.VerifyError);
+            }
+        }
+
+        private string GetLoginMode(VerifyMode verifyMode)
+        {
+            string mode = string.Empty;
+
+            switch (verifyMode)
+            {
+                case VerifyMode.Login:
+                case VerifyMode.VerifyError:
+                    mode = "login";
+                    break;
+                case VerifyMode.Passenger:
+                    mode = "passenger";
+                    break;
+            }
+
+            return mode;
+        }
+
+        private string GetVerifyMode(VerifyMode verifyMode)
+        {
+            string mode = string.Empty;
+            switch (verifyMode)
+            {
+                case VerifyMode.Login:
+                case VerifyMode.VerifyError:
+                    mode = "sjrand";
+                    break;
+                case VerifyMode.Passenger:
+                    mode = "randp";
+                    break;
+            }
+
+            return mode;
+        }
+
+        private string GetVerifyData(string code, string token)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(GetFormKeyValue("randCode", code));
+            sb.Append("&");
+            sb.Append(GetFormKeyValue("rand", GetVerifyMode(mode)));
+            if (mode == VerifyMode.Passenger)
+            {
+                sb.Append("&");
+                sb.Append(GetFormKeyValue("_json_att", string.Empty));
+                sb.Append("&");
+                sb.Append(GetFormKeyValue("REPEAT_SUBMIT_TOKEN=", token));
+            }
+
+            return sb.ToString();
+        }
+
+        private string GetFormKeyValue(string name, string value)
+        {
+            return string.Format("{0}={1}", name, TicketUtil.UrlEncode(value));
         }
     }
 
@@ -439,7 +572,7 @@ namespace Ticket
 
         public override string ToString()
         {
-            return string.Format("<tr><td><a name='station' href='javascript:void(0);'>{0}</a></td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td><td>{13}</td><td>{14}</td><td><a name='order' href='javascript:void(0);'>{15}</a></td></tr>", queryLeftNewDTO.station_train_code, queryLeftNewDTO.from_station_name + "</br>" + queryLeftNewDTO.start_time, queryLeftNewDTO.to_station_name + "</br>" + queryLeftNewDTO.arrive_time, queryLeftNewDTO.lishi, queryLeftNewDTO.swz_num, queryLeftNewDTO.tz_num, queryLeftNewDTO.zy_num, queryLeftNewDTO.ze_num, queryLeftNewDTO.gr_num, queryLeftNewDTO.rw_num, queryLeftNewDTO.yw_num, queryLeftNewDTO.rz_num, queryLeftNewDTO.yz_num, queryLeftNewDTO.wz_num, queryLeftNewDTO.qt_num, buttonTextInfo);
+            return string.Format("<tr><td><a name='station' href='javascript:void(0);'>{0}</a></td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td><td>{13}</td><td>{14}</td><td><a name='order' id='{16}' href='javascript:void(0);'>{15}</a></td></tr>", queryLeftNewDTO.station_train_code, queryLeftNewDTO.from_station_name + "</br>" + queryLeftNewDTO.start_time, queryLeftNewDTO.to_station_name + "</br>" + queryLeftNewDTO.arrive_time, queryLeftNewDTO.lishi, queryLeftNewDTO.swz_num, queryLeftNewDTO.tz_num, queryLeftNewDTO.zy_num, queryLeftNewDTO.ze_num, queryLeftNewDTO.gr_num, queryLeftNewDTO.rw_num, queryLeftNewDTO.yw_num, queryLeftNewDTO.rz_num, queryLeftNewDTO.yz_num, queryLeftNewDTO.wz_num, queryLeftNewDTO.qt_num, buttonTextInfo, this.secretStr);
         }
     }
 
@@ -530,6 +663,273 @@ namespace Ticket
         public string zy_num { get; set; }
 
         public string swz_num { get; set; }
+    }
+
+    public class TicketInfo
+    {
+        public CardType2[] cardTypes { get; set; }
+
+        public string isAsync { get; set; }
+
+        public string key_check_isChange { get; set; }
+
+        public string[] leftDetails { get; set; }
+
+        public string leftTicketStr { get; set; }
+
+        public LimitBuySeatTicketDTO limitBuySeatTicketDTO { get; set; }
+
+        public string maxTicketNum { get; set; }
+
+        public OrderRequestDTO orderRequestDTO { get; set; }
+
+        public string purpose_codes { get; set; }
+
+        public QueryLeftNewDetailDTO queryLeftNewDetailDTO { get; set; }
+
+        public QueryLeftTicketRequestDTO queryLeftTicketRequestDTO { get; set; }
+
+        public string tour_flag { get; set; }
+
+        public string train_location { get; set; }
+    }
+
+    public class CardType2
+    {
+        public string end_station_name { get; set; }
+
+        public string end_time { get; set; }
+
+        public string id { get; set; }
+
+        public string start_station_name { get; set; }
+
+        public string start_time { get; set; }
+
+        public string value { get; set; }
+    }
+
+    public class LimitBuySeatTicketDTO
+    {
+        public CardType2[] seat_type_codes { get; set; }
+
+        public Dictionary<int, CardType2[]> ticket_seat_codeMap { get; set; }
+
+        public CardType2[] ticket_type_codes { get; set; }
+    }
+
+    public class OrderRequestDTO
+    {
+        public int adult_num { get; set; }
+
+        public string apply_order_no { get; set; }
+
+        public string bed_level_order_num { get; set; }
+
+        public string bureau_code { get; set; }
+
+        public string cancel_flag { get; set; }
+
+        public string card_num { get; set; }
+
+        public int child_num { get; set; }
+
+        public int disability_num { get; set; }
+
+        public Time end_time { get; set; }
+
+        public string from_station_name { get; set; }
+
+        public string from_station_telecode { get; set; }
+
+        public string get_ticket_pass { get; set; }
+
+        public string id_mode { get; set; }
+
+        public string order_date { get; set; }
+
+        public string reserve_flag { get; set; }
+
+        public string seat_detail_type_code { get; set; }
+
+        public string seat_type_code { get; set; }
+
+        public string sequence_no { get; set; }
+
+        public Time start_time { get; set; }
+
+        public string start_time_str { get; set; }
+
+        public string station_train_code { get; set; }
+
+        public string student_num { get; set; }
+
+        public string ticket_num { get; set; }
+
+        public string ticket_type_order_num { get; set; }
+
+        public string to_station_name { get; set; }
+
+        public string to_station_telecode { get; set; }
+
+        public string tour_flag { get; set; }
+
+        public string trainCodeText { get; set; }
+
+        public Time train_date { get; set; }
+
+        public string train_date_str { get; set; }
+
+        public string train_location { get; set; }
+
+        public string train_no { get; set; }
+
+        public string train_order { get; set; }
+    }
+
+    public class QueryLeftNewDetailDTO
+    {
+        public string BXRZ_num { get; set; }
+        public string BXRZ_price { get; set; }
+        public string BXYW_num { get; set; }
+        public string BXYW_price { get; set; }
+        public string EDRZ_num { get; set; }
+        public string EDRZ_price { get; set; }
+        public string EDSR_num { get; set; }
+        public string EDSR_price { get; set; }
+        public string ERRB_num { get; set; }
+        public string ERRB_price { get; set; }
+        public string GG_num { get; set; }
+        public string GG_price { get; set; }
+        public string GR_num { get; set; }
+        public string GR_price { get; set; }
+        public string HBRW_num { get; set; }
+        public string HBRW_price { get; set; }
+        public string HBRZ_num { get; set; }
+        public string HBRZ_price { get; set; }
+        public string HBYW_num { get; set; }
+        public string HBYW_price { get; set; }
+        public string HBYZ_num { get; set; }
+        public string HBYZ_price { get; set; }
+        public string RW_num { get; set; }
+        public string RW_price { get; set; }
+        public string RZ_num { get; set; }
+        public string RZ_price { get; set; }
+        public string SRRB_num { get; set; }
+        public string SRRB_price { get; set; }
+        public string SWZ_num { get; set; }
+        public string SWZ_price { get; set; }
+        public string TDRZ_num { get; set; }
+        public string TDRZ_price { get; set; }
+        public string TZ_num { get; set; }
+        public string TZ_price { get; set; }
+        public string WZ_num { get; set; }
+        public string WZ_price { get; set; }
+        public string WZ_seat_type_code { get; set; }
+        public string YB_num { get; set; }
+        public string YB_price { get; set; }
+        public string YDRZ_num { get; set; }
+        public string YDRZ_price { get; set; }
+        public string YDSR_num { get; set; }
+        public string YDSR_price { get; set; }
+        public string YRRB_num { get; set; }
+        public string YRRB_price { get; set; }
+        public string YW_num { get; set; }
+        public string YW_price { get; set; }
+        public string YYRW_num { get; set; }
+        public string YYRW_price { get; set; }
+        public string YZ_num { get; set; }
+        public string YZ_price { get; set; }
+        public string ZE_num { get; set; }
+        public string ZE_price { get; set; }
+        public string ZY_num { get; set; }
+        public string ZY_price { get; set; }
+        public string arrive_time { get; set; }
+        public string control_train_day { get; set; }
+        public string day_difference { get; set; }
+        public string end_station_name { get; set; }
+        public string end_station_telecode { get; set; }
+        public string from_station_name { get; set; }
+        public string from_station_telecode { get; set; }
+        public string is_support_card { get; set; }
+        public string lishi { get; set; }
+        public string seat_feature { get; set; }
+        public string start_station_name { get; set; }
+        public string start_station_telecode { get; set; }
+        public string start_time { get; set; }
+        public string start_train_date { get; set; }
+        public string station_train_code { get; set; }
+        public string to_station_name { get; set; }
+        public string to_station_telecode { get; set; }
+        public string train_class_name { get; set; }
+        public string train_no { get; set; }
+        public string train_seat_feature { get; set; }
+        public string yp_ex { get; set; }
+    }
+
+    public class QueryLeftTicketRequestDTO
+    {
+        public string arrive_time { get; set; }
+        public string bigger20 { get; set; }
+        public string from_station { get; set; }
+        public string from_station_name { get; set; }
+        public string from_station_no { get; set; }
+        public string lishi { get; set; }
+        public string login_id { get; set; }
+        public string login_mode { get; set; }
+        public string login_site { get; set; }
+        public string purpose_codes { get; set; }
+        public string query_type { get; set; }
+        public string seatTypeAndNum { get; set; }
+        public string seat_types { get; set; }
+        public string start_time { get; set; }
+        public string start_time_begin { get; set; }
+        public string start_time_end { get; set; }
+        public string station_train_code { get; set; }
+        public string to_station { get; set; }
+        public string to_station_name { get; set; }
+        public string to_station_no { get; set; }
+        public string train_date { get; set; }
+        public string train_flag { get; set; }
+        public string train_headers { get; set; }
+        public string train_no { get; set; }
+        public bool useMasterPool { get; set; }
+        public bool useWB10LimitTime { get; set; }
+        public bool usingGemfireCache { get; set; }
+        public string ypInfoDetail { get; set; }
+
+        public string ToHtmlString()
+        {
+            string longDate = TicketUtil.ToLongDate(this.train_date);
+            string date = string.Format("{0}({1})", longDate, TicketUtil.ToCnWeek(Convert.ToDateTime(longDate)));
+            return string.Format("<strong>{0}</strong> <strong>{1}</strong>次 <strong>{2}</strong>({3}开)→<strong>{4}</strong>({5}到)", date, station_train_code, from_station_name, start_time, to_station_name, arrive_time);
+        }
+    }
+
+    public class Time
+    {
+        public int date { get; set; }
+
+        public int day { get; set; }
+
+        public int hours { get; set; }
+
+        public int minutes { get; set; }
+
+        public int month { get; set; }
+
+        public int seconds { get; set; }
+
+        public int time { get; set; }
+
+        public int timezoneOffset { get; set; }
+
+        public int year { get; set; }
+    }
+
+    public class OrderRequestInfo
+    {
+
     }
 
     public class PassengerResult : Result
@@ -646,6 +1046,21 @@ namespace Ticket
         public override string ToString()
         {
             return string.Format("{0},{1},{2},{3},{4}", passenger_name, passenger_id_type_name, passenger_id_no, mobile_no, passenger_type_name);
+        }
+
+        public string PassengerToHtmlString(int index, string seat, string card)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("<tr>");
+            sb.Append(string.Format("<td>第{0}位</td>", index));
+            sb.Append(string.Format("<td>{0}</td>", seat));
+            sb.Append(string.Format("<td>{0}</td>", card));
+            sb.Append(string.Format("<td>{0}</td>", passenger_name));
+            sb.Append(string.Format("<td>{0}</td>", passenger_id_type_name));
+            sb.Append(string.Format("<td>{0}</td>", passenger_id_no));
+            sb.Append(string.Format("<td>{0}</td>", mobile_no));
+            sb.Append("</tr>");
+            return sb.ToString();
         }
     }
 

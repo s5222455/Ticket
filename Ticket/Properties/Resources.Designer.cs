@@ -102,11 +102,40 @@ namespace Ticket.Properties {
         }
         
         /// <summary>
-        ///   查找类似 &lt;html&gt;&lt;head&gt;&lt;style type=&quot;text/css&quot;&gt;body{margin:0px}a:visited{color: #0000ff;
-        /// text-decoration: none;
-        ///}table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;text-align:center;background-color:#d3d3d3;}th{background-color:#133e5d;color:white;font-size: 12px;}td{border:solid #a0a0a0 1px;font-size: 12px;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;table&gt;&lt;thead&gt;&lt;tr         ///
-        ///style=&quot;height:23px;&quot;&gt;&lt;th width=&quot;49&quot;&gt;车次&lt;/th&gt;&lt;th width=&quot;49&quot;&gt;发站&lt;/th&gt;&lt;th width=&quot;49&quot;&gt;到站&lt;/th&gt;&lt;th         ///
-        ///width=&quot;49&quot;&gt;历时&lt;/th&gt;&lt;th width= [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        ///   查找类似 &lt;html&gt;
+        ///&lt;head&gt;
+        ///&lt;title&gt;&lt;/title&gt;
+        ///&lt;style type=&quot;text/css&quot;&gt;
+        ///body{margin:0px;border-top:1px solid #000;}
+        ///p{
+        ///margin:0px auto;
+        ///font-size:12px;
+        ///text-align:center;
+        ///}
+        ///p span{
+        ///bold:bold;
+        ///}select{
+        ///border:0;
+        ///}
+        ///tbody tr{border-bottom:1px dashed #000;}
+        ///th{background-color:#133e5d;color:white;}
+        ///table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;text-align:left;}
+        ///&lt;/style&gt;
+        ///&lt;/head&gt;
+        ///&lt;body&gt;
+        ///&lt;p&gt;您即将预订：{@orderInfo}&lt;p&gt;
+        ///&lt;p&gt;其中：&lt;span&gt;{@seat}&lt;/span&gt;&lt;p&gt;
+        ///&lt;table&gt;
+        ///&lt;thead&gt; [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        /// </summary>
+        internal static string order_document {
+            get {
+                return ResourceManager.GetString("order_document", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 &lt;html&gt;&lt;head&gt;&lt;style type=&quot;text/css&quot;&gt;body{margin:0px}a:visited{color: #0000ff; text-decoration: none; }table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-collapse: collapse;text-align:center;background-color:#d3d3d3;}th{background-color:#133e5d;color:white;font-size: 12px;}td{border:solid #a0a0a0 1px;font-size: 12px;}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;table&gt;&lt;thead&gt;&lt;tr style=&quot;height:23px;&quot;&gt;&lt;th width=&quot;49&quot;&gt;车次&lt;/th&gt;&lt;th width=&quot;49&quot;&gt;发站&lt;/th&gt;&lt;th width=&quot;49&quot;&gt;到站&lt;/th&gt;&lt;th width=&quot;49&quot;&gt;历时&lt;/th&gt;&lt;th width=&quot;49&quot;&gt;商务座&lt; [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         internal static string query_document {
             get {

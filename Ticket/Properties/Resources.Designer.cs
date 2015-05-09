@@ -125,8 +125,7 @@ namespace Ticket.Properties {
         ///&lt;body&gt;
         ///&lt;p&gt;您即将预订：{@orderInfo}&lt;p&gt;
         ///&lt;p&gt;其中：&lt;span&gt;{@seat}&lt;/span&gt;&lt;p&gt;
-        ///&lt;table&gt;
-        ///&lt;thead&gt; [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        ///&lt;table id=&apos;passe [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         internal static string order_document {
             get {

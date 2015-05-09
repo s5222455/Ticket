@@ -99,6 +99,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RequestOrderEventArgs.cs" />
+    <Compile Include="ReponseEventArgs.cs" />
     <Compile Include="SessionEventArgs.cs" />
     <Compile Include="Setting.cs" />
     <Compile Include="TicketClient.cs" />

@@ -24,13 +24,13 @@ namespace Ticket
 
         void btnCancel_Click(object sender, EventArgs e)
         {
-            OnInputCompleted(new InputEventArgs(this._code));
+            OnInputCompleted(new InputEventArgs(this._code.TrimEnd(',')));
             this.Close();
         }
 
         void btnYes_Click(object sender, EventArgs e)
         {
-            OnInputCompleted(new InputEventArgs(this._code));
+            OnInputCompleted(new InputEventArgs(this._code.TrimEnd(',')));
             this.Close();
         }
 

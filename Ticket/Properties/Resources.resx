@@ -211,7 +211,7 @@ table{font-size:12px;width:100%;margin:0px auto;padding:0px;border:none;border-c
 &lt;body&gt;
 &lt;p&gt;您即将预订：{@orderInfo}&lt;p&gt;
 &lt;p&gt;其中：&lt;span&gt;{@seat}&lt;/span&gt;&lt;p&gt;
-&lt;table&gt;
+&lt;table id='passengers'&gt;
 &lt;thead&gt;&lt;tr&gt;&lt;th width="50"&gt;序号&lt;/th&gt;&lt;th width="100"&gt;席别&lt;/th&gt;&lt;th width="100"&gt;票种&lt;/th&gt;&lt;th width="100"&gt;姓名&lt;/th&gt;&lt;th width="100"&gt;证件类型&lt;/th&gt;&lt;th width="150"&gt;证件号码&lt;/th&gt;&lt;th&gt;手机号码&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
 &lt;tbody&gt;{@passengers}&lt;/tbody&gt;
 &lt;/table&gt;

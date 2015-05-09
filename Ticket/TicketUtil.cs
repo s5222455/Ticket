@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Net.NetworkInformation;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Globalization;
 
 namespace Ticket
 {
@@ -260,6 +261,26 @@ namespace Ticket
             sb.Append("</select>");
 
             return sb.ToString();
+        }
+
+        public static string DateToString(DateTime date)
+        {
+            string fmtDate = "ddd MMM dd yyyy HH:mm:ss 'GMT'zz'00' ";
+            CultureInfo ciDate = CultureInfo.CreateSpecificCulture("en-US");
+            return date.ToString(fmtDate, ciDate) + " (中国标准时间)";
+        }
+
+        public static double ToTimestamp(DateTime value)
+        {
+            TimeSpan span = (value - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToLocalTime());
+            return (double)span.TotalSeconds;
+        }
+
+        public static DateTime ConvertTimestamp(double timestamp)
+        {
+            DateTime converted = new DateTime(1970, 1, 1, 0, 0, 0, 0);
+            DateTime newDateTime = converted.AddSeconds(timestamp);
+            return newDateTime.ToLocalTime();
         }
     }
 }

@@ -21,6 +21,7 @@ namespace Ticket
         private VerifyMode mode = VerifyMode.Login;
         private int defaultDataLength;
         private bool isCacheControl = true;
+        private string submitToken = string.Empty;
 
         public bool IsLogin { get { return _isLogin; } private set { _isLogin = value; } }
 
@@ -31,6 +32,8 @@ namespace Ticket
         public Ticket[] Tickets { get; private set; }
 
         public TicketInfo CurrentTicket { get; private set; }
+
+
 
         public string ParamKey
         {
@@ -59,7 +62,7 @@ namespace Ticket
         private static string host = "https://kyfw.12306.cn/otn/";
         private static string login_init_url = host + "login/init";
         private static string verify_image_url = host + "resources/js/newpasscode/captcha.png";
-        private static string login_verify_url = host + "passcodeNew/getPassCodeNew?module={0}&rand=sjrand&0.{1}";
+        private static string login_verify_url = host + "passcodeNew/getPassCodeNew?module={0}&rand={1}&0.{2}";
         private static string login_check_url = host + "passcodeNew/checkRandCodeAnsyn";
         private static string login_url = host + "login/loginAysnSuggest";
         private static string login_url2 = host + "login/userLogin";
@@ -76,7 +79,14 @@ namespace Ticket
         private static string get_queue_count = host + "confirmPassenger/getQueueCount";
         private static string check_user_url = host + "login/checkUser";
         private static string logout_url = host + "login/loginOut";
+        private static string left_ticket_init_url = host + "leftTicket/init";
+        private static string confirm_queue_url = host + "confirmPassenger/confirmSingleForQueue";
+        private static string request_wait_url = host + "confirmPassenger/queryOrderWaitTime?random={0}&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN={1}";
+        private static string result_order_url = host + "hconfirmPassenger/resultOrderForDcQueue";
 
+        private static string query_init_url = host + "leftTicket/init";
+
+        private static string load_url = "https://kyfw.12306.cn/otn/resources/images/loading.gif";
         private static string default_post_data = "_json_att=";
         private static byte[] default_post_data_bytes = Encoding.Default.GetBytes(default_post_data);
         #endregion
@@ -88,16 +98,26 @@ namespace Ticket
 
         public void LoadCities()
         {
-            string html = this._httpHelper.GetHtml(city_url);
-            string[] cInfo = null;
-            Cities = (from s in html.Split('@') where (cInfo = s.Split('|')).Length == 6 select new City() { ShortName = cInfo[0], CnName = cInfo[1], EnId = cInfo[2], Pinyin = cInfo[3], ShortPinyin = cInfo[4], Id = cInfo[5] }).ToArray();
-            OnLoadCitiesCompleted(new CityEventArgs(Cities));
+            if (Cities == null || Cities.Length <= 0)
+            {
+                string cookie = _httpHelper.GetCookiesString(login_init_url);
+                var headers = GetGetHeaders("*/*", query_init_url, cookie);
+                string html = this._httpHelper.GetHtml(city_url);
+                string[] cInfo = null;
+                Cities = (from s in html.Split('@') where (cInfo = s.Split('|')).Length == 6 select new City() { ShortName = cInfo[0], CnName = cInfo[1], EnId = cInfo[2], Pinyin = cInfo[3], ShortPinyin = cInfo[4], Id = cInfo[5] }).ToArray();
+                OnLoadCitiesCompleted(new CityEventArgs(Cities));
+            }
         }
 
         public TicketResult QueryTicket(string date, string from, string to)
         {
+            string cookie = _httpHelper.GetCookiesString(login_init_url);
+            var initHeaders = GetGetHeaders("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", login_init_url, cookie);
+            var html = _httpHelper.GetHtml(query_init_url, initHeaders);
+            RefreshDynamicKey(html, query_init_url);
+
             string url = string.Format(query_ticket_url, date, from, to);
-            string html = this._httpHelper.GetHtml(url);
+            html = this._httpHelper.GetHtml(url);
             var TicketResult = JsonConvert.DeserializeObject<TicketResult>(html);
             Tickets = TicketResult != null ? TicketResult.data : null;
             return TicketResult;
@@ -115,24 +135,39 @@ namespace Ticket
                 }
             }
 
-            RefreshDynamicKey(html);
+            RefreshDynamicKey(html, login_init_url);
         }
 
-        private void RefreshDynamicKey(string html)
+        private void RefreshDynamicKey(string html, string referer)
         {
             var dynamicUrl = GetDynamicJsUrl(html);
-            ParamKey = GetDynamicKey(dynamicUrl);
-            var jsUrl = GetDynamicUrl(html);
+            string cookie = _httpHelper.GetCookiesString(login_init_url);
+            var dynamicHtml = _httpHelper.GetHtml(dynamicUrl, GetDynamicHeaders(cookie, referer));
+            ParamKey = GetDynamicKey(dynamicHtml);
+            var jsUrl = GetDynamicUrl(dynamicHtml);
+            var headers = GetPostHeaders("*/*", 0, cookie, referer);
+            _httpHelper.PostHtml(jsUrl, headers, null);
         }
 
         public void RefreshVerify(VerifyMode mode)
         {
             this.mode = mode;
+            string referer = string.Empty;
+            switch (mode)
+            {
+                case VerifyMode.Login:
+                case VerifyMode.VerifyError:
+                    referer = login_init_url;
+                    break;
+                case VerifyMode.Passenger:
+                    referer = init_dc_url;
+                    break;
+            }
 
-            string url = string.Format(login_verify_url, GetLoginMode(mode), DateTime.Now.Ticks.ToString());
+            string url = string.Format(login_verify_url, GetLoginMode(mode), GetVerifyMode(mode), DateTime.Now.Ticks.ToString());
             try
             {
-                var image = this._httpHelper.GetImage(url, GetVerifyImageHeaders(this._httpHelper.GetCookiesString(login_init_url)));
+                var image = this._httpHelper.GetImage(url, GetVerifyImageHeaders(this._httpHelper.GetCookiesString(login_init_url), referer));
                 var e = new VerifyEventArgs(mode, image);
                 OnRefreshVerifyCompleted(e);
             }
@@ -142,20 +177,27 @@ namespace Ticket
             }
         }
 
-        public bool CheckVerify(string code, string token)
+        public bool CheckVerify(string code, string token, string referer)
         {
+            string cookie = this._httpHelper.GetCookiesString(login_init_url);
             string data = GetVerifyData(code, token);
             byte[] dataBytes = Encoding.Default.GetBytes(data);
-            var headers = GetCheckVerifyHeaders(dataBytes.Length, this._httpHelper.GetCookiesString(login_init_url));
-            string html = this._httpHelper.PostHtml(login_check_url, data, login_init_url);
+            var headers = GetCheckVerifyHeaders(dataBytes.Length, cookie, referer);
+            string html = this._httpHelper.PostHtml(login_check_url, headers, dataBytes);
             var verifyResult = JsonConvert.DeserializeObject<VerifyResult>(html);
             return verifyResult.data != null && verifyResult.data.result == "1";
+        }
+
+        private void LoadWait(string referer, string cookie)
+        {
+            var headers = GetGetHeaders("image/webp,*/*;q=0.8", referer, cookie);
+            _httpHelper.GetHtml(load_url, headers);
         }
 
         public void CheckLogin(string uname, string upwd, string code)
         {
             LoginEventArgs loginEventArgs = null;
-            if (CheckVerify(code, string.Empty))
+            if (CheckVerify(code, string.Empty, login_init_url))
             {
                 this.User = new User(uname, upwd);
                 string data = string.Format("loginUserDTO.user_name={0}&userDTO.password={1}&randCode={2}&{3}={4}&myversion=undefined", uname, upwd, TicketUtil.UrlEncode(code), ParamKey, TicketUtil.UrlEncode(ParamValue));
@@ -196,12 +238,107 @@ namespace Ticket
             string requestOrderData = string.Format("{0}={1}&myversion=undefined&secretStr={2}&train_date={3}&back_train_date={4}&tour_flag=dc&purpose_codes=ADULT&query_from_station_name={5}&query_to_station_name={6}&undefined", ParamKey, TicketUtil.UrlEncode(ParamValue), secret, TicketUtil.ToLongDate(trainDate), DateTime.Now.ToString("yyyy-MM-dd"), fromStationName, toStationName);
             var requestOrderBytes = Encoding.Default.GetBytes(requestOrderData);
             html = _httpHelper.PostHtml(submit_order_request_url, GetOrderRequestHeaders(requestOrderBytes.Length), requestOrderBytes);
+            var result = JsonConvert.DeserializeObject<ReservationResult>(html);
+            if (result.data == "N")
+            {
+                html = _httpHelper.PostHtml(init_dc_url, GetInitDcHeaders(), default_post_data_bytes);
+                RefreshDynamicKey(html, init_dc_url);
+                submitToken = submitTokenRegex.Match(html).Groups["value"].Value;
+                CurrentTicket = JsonConvert.DeserializeObject<TicketInfo>(ticketInfoRegex.Match(html).Groups["value"].Value);
+                OnRequestOrderCompleted(new RequestOrderEventArgs(CurrentTicket));
+            }
 
-            html = _httpHelper.PostHtml(init_dc_url, GetInitDcHeaders(), default_post_data_bytes);
-            RefreshDynamicKey(html);
+            OnReservationCompleted(new ReponseEventArgs<ReservationResult>(result));
 
-            CurrentTicket = JsonConvert.DeserializeObject<TicketInfo>(ticketInfoRegex.Match(html).Groups["value"].Value);
-            OnRequestOrderCompleted(new RequestOrderEventArgs(CurrentTicket));
+        }
+
+        public void BeginSubmitOrder(string passenger, string oldPassenger, string code)
+        {
+            Task task = new Task(() =>
+            {
+                SubmitOrder(passenger, oldPassenger, code);
+            });
+
+            task.ContinueWith((t) =>
+            {
+
+            }, TaskContinuationOptions.OnlyOnFaulted);
+
+            task.Start();
+        }
+
+        public void SubmitOrder(string passenger, string oldPassenger, string code)
+        {
+            var seatType = passenger.Substring(0, 1);
+            string checkOrderData = string.Format("cancel_flag=2&bed_level_order_num=000000000000000000000000000000&passengerTicketStr={0}&oldPassengerStr={1}&tour_flag=dc&randCode={2}&{3}={4}&_json_att=&REPEAT_SUBMIT_TOKEN={5}", TicketUtil.UrlEncode(passenger), TicketUtil.UrlEncode(oldPassenger), TicketUtil.UrlEncode(code), TicketUtil.UrlEncode(ParamKey), TicketUtil.UrlEncode(ParamValue), TicketUtil.UrlEncode(submitToken));
+            var checkOrderBytes = Encoding.Default.GetBytes(checkOrderData);
+            var html = _httpHelper.PostHtml(check_order_url, GetCheckOrderHeaders(checkOrderBytes.Length), checkOrderBytes);
+
+            var requestOrderResult = JsonConvert.DeserializeObject<RequestOrderResult>(html);
+
+            if (requestOrderResult.data != null && requestOrderResult.data.submitStatus)
+            {
+                var result = GetQueueCount(seatType);
+                var confirmQueueResult = ConfirmQueue(passenger, oldPassenger, code);
+                if (confirmQueueResult.data != null && confirmQueueResult.data.submitStatus)
+                {
+                    var waitResult = QueueOrder();
+                    if (!string.IsNullOrEmpty(waitResult.data.orderId))
+                    {
+                        GetResultOrder(waitResult.data.orderId);
+                    }
+                    else
+                    {
+                        OnCreateOrderCompleted(new ReponseEventArgs<WaitQueueResult>(waitResult));
+                    }
+                }
+            }
+
+            OnSubmitOrderCompleted(new ReponseEventArgs<RequestOrderResult>(requestOrderResult));
+        }
+
+        private QueueResult GetQueueCount(string seatType)
+        {
+            var ticketRequest = CurrentTicket.queryLeftTicketRequestDTO;
+            var date = TicketUtil.DateToString(Convert.ToDateTime(TicketUtil.ToLongDate(ticketRequest.train_date)));
+
+            string queueData = string.Format("train_date={0}&train_no={1}&stationTrainCode={2}&seatType={3}&fromStationTelecode={4}&toStationTelecode={5}&leftTicket={6}&purpose_codes={7}&_json_att=&REPEAT_SUBMIT_TOKEN={8}", TicketUtil.UrlEncode(date), ticketRequest.train_no, ticketRequest.station_train_code, seatType, ticketRequest.from_station, ticketRequest.to_station, ticketRequest.ypInfoDetail, ticketRequest.purpose_codes, submitToken);
+            byte[] queueBytes = Encoding.Default.GetBytes(queueData);
+            var html = _httpHelper.PostHtml(get_queue_count, GetQueueCountHeaders(queueBytes.Length), queueBytes);
+
+            return JsonConvert.DeserializeObject<QueueResult>(html);
+        }
+
+        private ConfirmQueueResult ConfirmQueue(string passenger, string oldPassenger, string code)
+        {
+            string data = string.Format("passengerTicketStr={0}&oldPassengerStr={1}&randCode={2}&purpose_codes={3}&key_check_isChange={4}&leftTicketStr={5}&train_location=N2&roomType=00&dwAll=N&_json_att=&REPEAT_SUBMIT_TOKEN={6}", TicketUtil.UrlEncode(passenger), TicketUtil.UrlEncode(oldPassenger), TicketUtil.UrlEncode(code), CurrentTicket.queryLeftTicketRequestDTO.purpose_codes, CurrentTicket.key_check_isChange, CurrentTicket.queryLeftTicketRequestDTO.ypInfoDetail, submitToken);
+            byte[] bytes = Encoding.Default.GetBytes(data);
+            var html = _httpHelper.PostHtml(confirm_queue_url, GetConfirmQueueHeaders(bytes.Length), bytes);
+            return JsonConvert.DeserializeObject<ConfirmQueueResult>(html);
+        }
+
+        private WaitQueueResult QueueOrder()
+        {
+            WaitQueueResult waitResult;
+            while (true)
+            {
+                string url = string.Format(request_wait_url, TicketUtil.ToTimestamp(DateTime.Now).ToString(), submitToken);
+                string html = _httpHelper.GetHtml(url, GetQueueOrderHeaders());
+                waitResult = JsonConvert.DeserializeObject<WaitQueueResult>(html);
+                if (waitResult != null && waitResult.data != null && waitResult.data.queryOrderWaitTimeStatus)
+                {
+                    break;
+                }
+            }
+
+            return waitResult;
+        }
+
+        private void GetResultOrder(string sequence)
+        {
+            string data = string.Format("orderSequence_no={0}&_json_att=&REPEAT_SUBMIT_TOKEN={1}", sequence, submitToken);
+            byte[] bytes = Encoding.Default.GetBytes(data);
+            var html = _httpHelper.PostHtml(result_order_url, GetResultOrderHeaders(bytes.Length), bytes);
         }
 
         private Dictionary<string, string> GetInitHeaders(string cookie)
@@ -209,87 +346,115 @@ namespace Ticket
             return GetGetHeaders("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", host, cookie);
         }
 
-        private Dictionary<string, string> GetVerifyImageHeaders(string cookie)
+        private Dictionary<string, string> GetVerifyImageHeaders(string cookie, string referer)
         {
             return GetGetHeaders("mage/webp,*/*;q=0.8", login_init_url, cookie);
         }
 
-        private Dictionary<string, string> GetCheckVerifyHeaders(int cLength, string cookie)
+        private Dictionary<string, string> GetCheckVerifyHeaders(int cLength, string cookie, string referer)
         {
-            return GetPostHeaders("*/*", cLength, cookie);
+            return GetPostHeaders("*/*", cLength, cookie, referer);
         }
 
-        private Dictionary<string, string> GetDynamicHeaders(string cookie)
+        private Dictionary<string, string> GetDynamicHeaders(string cookie, string referer)
         {
-            return GetGetHeaders("*/*", login_init_url, cookie);
+            return GetGetHeaders("*/*", referer, cookie);
         }
 
         private Dictionary<string, string> GetLoginHeaders(string cLength, string cookie)
         {
-            return GetPostHeaders("*/*", defaultDataLength, _httpHelper.GetCookiesString(login_init_url));
+            return GetPostHeaders("*/*", defaultDataLength, _httpHelper.GetCookiesString(login_init_url), login_init_url);
         }
 
         private Dictionary<string, string> GetCheckUserHeaders()
         {
-            return GetPostHeaders("*/*", defaultDataLength, _httpHelper.GetCookiesString(login_init_url), "0");
+            return GetPostHeaders("*/*", defaultDataLength, _httpHelper.GetCookiesString(login_init_url), left_ticket_init_url, "0");
         }
 
         private Dictionary<string, string> GetOrderRequestHeaders(int cLength)
         {
-            return GetPostHeaders("*/*", cLength, _httpHelper.GetCookiesString(login_init_url));
+            return GetPostHeaders("*/*", cLength, _httpHelper.GetCookiesString(login_init_url), left_ticket_init_url);
         }
 
         private Dictionary<string, string> GetInitDcHeaders()
         {
-            return GetPostHeaders("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", defaultDataLength, _httpHelper.GetCookiesString(login_init_url));
+            return GetPostHeaders("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8", defaultDataLength, _httpHelper.GetCookiesString(login_init_url), left_ticket_init_url);
         }
 
         private Dictionary<string, string> GetCheckOrderHeaders(int cLength)
         {
-            return GetPostHeaders("application/json, text/javascript, */*; q=0.01", cLength, _httpHelper.GetCookiesString(login_init_url));
+            return GetPostHeaders("application/json, text/javascript, */*; q=0.01", cLength, _httpHelper.GetCookiesString(login_init_url), init_dc_url);
         }
 
-        private Dictionary<string, string> GetGetHeaders(string accept, string referer, string cookie, bool isCacheControl = false)
+        private Dictionary<string, string> GetQueueCountHeaders(int cLength)
+        {
+            return GetPostHeaders("application/json, text/javascript, */*; q=0.01", cLength, _httpHelper.GetCookiesString(login_init_url), init_dc_url);
+        }
+
+        private Dictionary<string, string> GetConfirmQueueHeaders(int cLength)
+        {
+            return GetPostHeaders("application/json, text/javascript, */*; q=0.01", cLength, _httpHelper.GetCookiesString(login_init_url), init_dc_url);
+        }
+
+        private Dictionary<string, string> GetQueueOrderHeaders()
+        {
+            return GetGetHeaders("application/json, text/javascript, */*; q=0.01", init_dc_url, _httpHelper.GetCookiesString(login_init_url));
+        }
+
+        private Dictionary<string, string> GetResultOrderHeaders(int cLength)
+        {
+            return GetPostHeaders("application/json, text/javascript, */*; q=0.01", cLength, _httpHelper.GetCookiesString(login_init_url), init_dc_url);
+        }
+
+        private Dictionary<string, string> GetGetHeaders(string accept, string referer, string cookie, bool isCacheControl = false, string since = "")
         {
             Dictionary<string, string> headers = new Dictionary<string, string>();
+
+            headers.Add("Host", "kyfw.12306.cn");
+            headers.Add("Connection", "keep-alive");
             headers.Add("Accept", accept);
+            if (!string.IsNullOrEmpty(since))
+            {
+                headers.Add("If-Modified-Since", "Fri, 08 May 2015 01:54:59 GMT");
+            }
+            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
+            headers.Add("Referer", referer);
             headers.Add("Accept-Encoding", "gzip, deflate, sdch");
             headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
             if (isCacheControl)
             {
                 headers.Add("Cache-Control", "max-age=0");
             }
-            headers.Add("Connection", "keep-alive");
+
             if (!string.IsNullOrEmpty(cookie))
             {
                 headers.Add("Cookie", cookie);
             }
-            headers.Add("Host", "kyfw.12306.cn");
-            headers.Add("Referer", referer);
-            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
 
             return headers;
         }
 
-        private Dictionary<string, string> GetPostHeaders(string accept, int cLength, string cookie, string modified = "")
+        private Dictionary<string, string> GetPostHeaders(string accept, int cLength, string cookie, string referer, string modified = "")
         {
             Dictionary<string, string> headers = new Dictionary<string, string>();
+            headers.Add("Host", "kyfw.12306.cn");
+            headers.Add("Connection", "keep-alive");
             headers.Add("Accept", accept);
+            headers.Add("Origin", "https://kyfw.12306.cn");
+            headers.Add("X-Requested-With", "XMLHttpRequest");
+            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
+            headers.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            headers.Add("Referer", referer);
             headers.Add("Accept-Encoding", "gzip, deflate");
             headers.Add("Accept-Language", "zh-CN,zh;q=0.8");
-            headers.Add("Connection", "keep-alive");
-            headers.Add("Content-Length", cLength.ToString());
-            headers.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
             headers.Add("Cookie", cookie);
-            headers.Add("Host", "kyfw.12306.cn");
+            headers.Add("Content-Length", cLength.ToString());
+
             if (!string.IsNullOrEmpty(modified))
             {
                 headers.Add("If-Modified-Sinc", modified);
             }
-            headers.Add("Origin", "https://kyfw.12306.cn");
-            headers.Add("Referer", login_init_url);
-            headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.89 Safari/537.36");
-            headers.Add("X-Requested-With", "XMLHttpRequest");
+
             return headers;
         }
 
@@ -365,16 +530,15 @@ namespace Ticket
         private Regex pageRegex = new Regex("var totlePage = (?<value>\\d+);");
         private Regex unameRegex = new Regex("user_name='(?<value>.+?)';");
         private Regex ticketInfoRegex = new Regex("ticketInfoForPassengerForm=(?<value>[\\w\\W]+?);");
+        private Regex submitTokenRegex = new Regex("globalRepeatSubmitToken = '(?<value>\\w+)';");
 
         private string GetDynamicJsUrl(string html)
         {
             return string.Format("{0}{1}", host, dynamicRegex.Match(html).Groups["value"].Value.TrimStart('/'));
         }
 
-        private string GetDynamicKey(string url)
+        private string GetDynamicKey(string html)
         {
-            string cookie = _httpHelper.GetCookiesString(login_init_url);
-            var html = _httpHelper.GetHtml(url, GetDynamicHeaders(cookie));
             return paramRegex.Match(html).Groups["value"].Value;
         }
 
@@ -395,6 +559,9 @@ namespace Ticket
         public event EventHandler<PassengerEventArgs> LoadPassengerCompleted;
         public event EventHandler<PassengerEventArgs> OpertionPassengerCompleted;
         public event EventHandler<RequestOrderEventArgs> RequestOrderCompleted;
+        public event EventHandler<ReponseEventArgs<ReservationResult>> ReservationCompleted;
+        public event EventHandler<ReponseEventArgs<RequestOrderResult>> SubmitOrderCompleted;
+        public event EventHandler<ReponseEventArgs<WaitQueueResult>> CreateOrderCompleted;
         public event EventHandler<SessionEventArgs> KeepLive;
 
         private void OnLoadCitiesCompleted(CityEventArgs e)
@@ -445,11 +612,33 @@ namespace Ticket
             }
         }
 
+        private void OnReservationCompleted(ReponseEventArgs<ReservationResult> e)
+        {
+            if (ReservationCompleted != null)
+            {
+                ReservationCompleted(this, e);
+            }
+        }
+
         private void OnRequestOrderCompleted(RequestOrderEventArgs e)
         {
             if (RequestOrderCompleted != null)
             {
                 RequestOrderCompleted(this, e);
+            }
+        }
+
+        private void OnSubmitOrderCompleted(ReponseEventArgs<RequestOrderResult> e)
+        {
+            if (SubmitOrderCompleted != null)
+                SubmitOrderCompleted(this, e);
+        }
+
+        private void OnCreateOrderCompleted(ReponseEventArgs<WaitQueueResult> e)
+        {
+            if (CreateOrderCompleted != null)
+            {
+                CreateOrderCompleted(this, e);
             }
         }
 
@@ -486,19 +675,7 @@ namespace Ticket
 
         private string GetVerifyMode(VerifyMode verifyMode)
         {
-            string mode = string.Empty;
-            switch (verifyMode)
-            {
-                case VerifyMode.Login:
-                case VerifyMode.VerifyError:
-                    mode = "sjrand";
-                    break;
-                case VerifyMode.Passenger:
-                    mode = "randp";
-                    break;
-            }
-
-            return mode;
+            return IsLogin ? "randp" : "sjrand";
         }
 
         private string GetVerifyData(string code, string token)
@@ -555,6 +732,76 @@ namespace Ticket
     public class LoginData
     {
         public string loginCheck { get; set; }
+    }
+
+    public class ReservationResult : Result
+    {
+        public string data { get; set; }
+    }
+
+    public class RequestOrderResult : Result
+    {
+        public RequestOrderData data { get; set; }
+    }
+
+    public class RequestOrderData
+    {
+        public string errMsg { get; set; }
+        public bool submitStatus { get; set; }
+    }
+
+    public class QueueResult : Result
+    {
+        public QueueData data { get; set; }
+    }
+
+    public class QueueData
+    {
+        public string count { get; set; }
+
+        public string ticket { get; set; }
+
+        public string op_2 { get; set; }
+
+        public string countT { get; set; }
+
+        public string op_1 { get; set; }
+    }
+
+    public class ConfirmQueueResult : Result
+    {
+        public ConfirmQueueData data { get; set; }
+    }
+
+    public class ConfirmQueueData
+    {
+        public bool submitStatus { get; set; }
+    }
+
+    public class WaitQueueResult : Result
+    {
+        public WaitQueueData data { get; set; }
+    }
+
+    public class WaitQueueData
+    {
+        public bool queryOrderWaitTimeStatus { get; set; }
+
+        public int count { get; set; }
+
+        public int waitTime { get; set; }
+
+        public long requestId { get; set; }
+
+        public int waitCount { get; set; }
+
+        public string tourFlag { get; set; }
+
+        public string errorcode { get; set; }
+
+        public string msg { get; set; }
+
+        public string orderId { get; set; }
     }
 
     public class TicketResult : Result
@@ -920,7 +1167,7 @@ namespace Ticket
 
         public int seconds { get; set; }
 
-        public int time { get; set; }
+        public long time { get; set; }
 
         public int timezoneOffset { get; set; }
 

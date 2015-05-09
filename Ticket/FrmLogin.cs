@@ -110,7 +110,7 @@ namespace Ticket
                 return;
             }
 
-            OnLoginTrigger(new UserLoginEventArgs(uname, upwd, this._code));
+            OnLoginTrigger(new UserLoginEventArgs(uname, upwd, this._code.TrimEnd(',')));
 
             this.Close();
         }

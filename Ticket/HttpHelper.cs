@@ -276,6 +276,8 @@ namespace Ticket
                     }
                 }
 
+                httpWebRequest.ServicePoint.Expect100Continue = false;
+
                 httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse();
 
                 if (httpWebResponse.Headers["Set-Cookie"] != null)

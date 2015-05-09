@@ -18,6 +18,7 @@ namespace Ticket
         private bool isExit = false;
         private bool isEnabledSelf = false;
         private Timer timer = new Timer();
+        private Ticket currentTicket;
 
         #region document
         private string default_document = global::Ticket.Properties.Resources.default_document;
@@ -162,7 +163,6 @@ namespace Ticket
             {
                 ele.Click += new HtmlElementEventHandler(ele_Click);
             }
-
         }
 
         void ele_Click(object sender, HtmlElementEventArgs e)
@@ -196,9 +196,9 @@ namespace Ticket
             if (_client.Tickets == null)
                 return;
 
-            var ticket = _client.Tickets.Single((t) => { return t.secretStr == secret; });
+            currentTicket = _client.Tickets.Single((t) => { return t.secretStr == secret; });
 
-            _client.Reservation(ticket.queryLeftNewDTO.start_train_date, secret, ticket.queryLeftNewDTO.from_station_name, ticket.queryLeftNewDTO.end_station_name);
+            _client.Reservation(currentTicket.queryLeftNewDTO.start_train_date, secret, currentTicket.queryLeftNewDTO.from_station_name, currentTicket.queryLeftNewDTO.end_station_name);
         }
 
         void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
@@ -212,7 +212,40 @@ namespace Ticket
 
         void btnSubmitOrder_Click(object sender, EventArgs e)
         {
+            _client.RefreshVerify(VerifyMode.Passenger);
+            var passengers = GetOrderPassengers();
+            _client.SubmitOrder(passengers[0], passengers[1], code);
+        }
 
+        private string[] GetOrderPassengers()
+        {
+            StringBuilder sbPassengers = new StringBuilder();
+            StringBuilder sbOldPassengers = new StringBuilder();
+            HtmlDocument doc = this.webBrowserOrder.Document;
+            var passengerEles = doc.GetElementById("passengers").GetElementsByTagName("tr");
+
+            for (int i = 1; i < passengerEles.Count; i++)
+            {
+                var ele = passengerEles[i];
+                var selects = ele.GetElementsByTagName("select");
+                if (selects.Count != 2)
+                {
+                    continue;
+                }
+
+                var seat = selects[0].GetAttribute("value");
+                var ticket = selects[1].GetAttribute("value");
+                var name = ele.GetElementsByTagName("td")[3].InnerText;
+                var cardNo = ele.GetElementsByTagName("td")[5].InnerText;
+                var mobile = ele.GetElementsByTagName("td")[6].InnerText;
+
+                sbPassengers.Append(string.Format("{0},0,{1},{2},1,{3},{4},N", seat, ticket, name, cardNo, mobile));
+                sbPassengers.Append("_");
+                sbOldPassengers.Append(string.Format("{0},1,{1},1", name, cardNo));
+                sbOldPassengers.Append("_");
+            }
+
+            return new string[] { sbPassengers.ToString().TrimEnd('_'), sbOldPassengers.ToString() };
         }
 
         void tsbtnCancellation_Click(object sender, EventArgs e)
@@ -233,8 +266,44 @@ namespace Ticket
             _client.LoginCompleted += new EventHandler<LoginEventArgs>(_client_LoginCompleted);
             _client.LoadPassengerCompleted += new EventHandler<PassengerEventArgs>(_client_LoadPassengerCompleted);
             _client.OpertionPassengerCompleted += new EventHandler<PassengerEventArgs>(_client_OpertionPassengerCompleted);
+            _client.ReservationCompleted += new EventHandler<ReponseEventArgs<ReservationResult>>(_client_ReservationCompleted);
             _client.RequestOrderCompleted += new EventHandler<RequestOrderEventArgs>(_client_RequestOrderCompleted);
+            _client.SubmitOrderCompleted += new EventHandler<ReponseEventArgs<RequestOrderResult>>(_client_SubmitOrderCompleted);
+            _client.CreateOrderCompleted += new EventHandler<ReponseEventArgs<WaitQueueResult>>(_client_CreateOrderCompleted);
             _client.LoadCities();
+        }
+
+        void _client_CreateOrderCompleted(object sender, ReponseEventArgs<WaitQueueResult> e)
+        {
+            if (e.Result != null && e.Result.data != null)
+            {
+                if (!string.IsNullOrWhiteSpace(e.Result.data.msg))
+                {
+                    SetStateText(e.Result.data.msg);
+                }
+            }
+        }
+
+        void _client_SubmitOrderCompleted(object sender, ReponseEventArgs<RequestOrderResult> e)
+        {
+            if (!e.Result.data.submitStatus)
+            {
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    _client.Reservation(currentTicket.queryLeftNewDTO.start_train_date, currentTicket.secretStr, currentTicket.queryLeftNewDTO.from_station_name, currentTicket.queryLeftNewDTO.end_station_name);
+                    btnSubmitOrder_Click(this, new EventArgs());
+                }));
+            }
+        }
+
+        void _client_ReservationCompleted(object sender, ReponseEventArgs<ReservationResult> e)
+        {
+            if (e.Result.data != "N")
+            {
+                btnQuery_Click(this, e);
+                currentTicket = _client.Tickets.Single((t) => { return t.queryLeftNewDTO.station_train_code == currentTicket.queryLeftNewDTO.station_train_code; });
+                Reservation(currentTicket.secretStr);
+            }
         }
 
         void _client_RequestOrderCompleted(object sender, RequestOrderEventArgs e)
@@ -304,9 +373,11 @@ namespace Ticket
                         frmLogin.ShowDialog();
                         _client.CheckLogin(_client.User.Username, _client.User.Password, code.Trim(','));
                     }
-                    else if (e.VerifyMode == VerifyMode.Order)
+                    else if (e.VerifyMode == VerifyMode.Passenger)
                     {
-
+                        FrmVerify frmVerify = new FrmVerify(e.VerifyImage);
+                        frmVerify.InputCompleted += new EventHandler<InputEventArgs>(frmVerify_InputCompleted);
+                        frmVerify.ShowDialog();
                     }
                 }));
             }
@@ -327,9 +398,11 @@ namespace Ticket
                     frmLogin.ShowDialog();
                     _client.CheckLogin(_client.User.Username, _client.User.Password, code.Trim(','));
                 }
-                else if (e.VerifyMode == VerifyMode.Order)
+                else if (e.VerifyMode == VerifyMode.Passenger)
                 {
-
+                    FrmVerify frmVerify = new FrmVerify(e.VerifyImage);
+                    frmVerify.InputCompleted += new EventHandler<InputEventArgs>(frmVerify_InputCompleted);
+                    frmVerify.ShowDialog();
                 }
             }
         }
@@ -479,10 +552,17 @@ namespace Ticket
             if (this.lvPassenger.SelectedItems.Count <= 0)
                 return;
 
+            List<Passenger> passengers = (this.lvPassenger.Tag as Passenger[]).ToList();
             foreach (ListViewItem item in this.lvPassenger.SelectedItems)
             {
                 this.lvPassenger.Items.Remove(item);
+                if (passengers != null)
+                {
+                    passengers.Remove(item.Tag as Passenger);
+                }
             }
+
+            this.lvPassenger.Tag = passengers.ToArray();
         }
 
         void llblSelectPassengers_Click(object sender, EventArgs e)

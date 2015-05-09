@@ -283,14 +283,7 @@ namespace Ticket
                 if (confirmQueueResult.data != null && confirmQueueResult.data.submitStatus)
                 {
                     var waitResult = QueueOrder();
-                    if (!string.IsNullOrEmpty(waitResult.data.orderId))
-                    {
-                        GetResultOrder(waitResult.data.orderId);
-                    }
-                    else
-                    {
-                        OnCreateOrderCompleted(new ReponseEventArgs<WaitQueueResult>(waitResult));
-                    }
+                    OnCreateOrderCompleted(new ReponseEventArgs<WaitQueueResult>(waitResult));
                 }
             }
 

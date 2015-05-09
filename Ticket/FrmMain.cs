@@ -281,6 +281,11 @@ namespace Ticket
                 {
                     SetStateText(e.Result.data.msg);
                 }
+
+                if (e.Result.data.errorcode == null)
+                {
+                    SetStateText("订票成功，请打开浏览器进行支付操作!");
+                }
             }
         }
 
